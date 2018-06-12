@@ -517,9 +517,7 @@ def update_rca(PRID,internaltask_sheet):
         return False
     todo_item.PRRcaCompleteDate = time.strftime('%Y-%m-%d',time.localtime(time.time()))    
     todo_item.IsRcaCompleted = 'Yes'
-    aa=findRootCauseIndex(16,'Root Cause',internaltask_sheet)
-    todo_item.RootCause = internaltask_sheet.cell_value(aa,11)
-    #todo_item.RootCause  = internaltask_sheet.cell_value(20,11)
+    todo_item.RootCause  = internaltask_sheet.cell_value(20,11)
     """
     with UseDatabase(app.config['dbconfig']) as cursor:
         _SQL = "alter table rcastatus MODIFY column FunctionArea VARCHAR(1024)"
@@ -537,8 +535,7 @@ def update_longcycletimerca(PRID,internaltask_sheet):
         return False
     todo_item.PRRcaCompleteDate = time.strftime('%Y-%m-%d',time.localtime(time.time()))    
     todo_item.LongCycleTimeRcaIsCompleted = 'Yes'
-    bb=findLongCycleRootCauseIndex(16,'Root Cause',internaltask_sheet)
-    todo_item.LongCycleTimeRootCause  = internaltask_sheet.cell_value(bb,11)
+    todo_item.LongCycleTimeRootCause  = internaltask_sheet.cell_value(21,11)
 
     db.session.commit()
     return True
@@ -585,21 +582,7 @@ def findIndex(index_start,target_String,internaltask_sheet):
         APDescription = internaltask_sheet.cell_value(index_start+i,12)
         if APDescription==target_String:
             return index_start+i+1
-			
-def findRootCauseIndex(index_start,target_String,internaltask_sheet):
-    APDescription = internaltask_sheet.cell_value(index_start,11)
-    for i in range(10):
-        APDescription = internaltask_sheet.cell_value(index_start+i,11)
-        if APDescription==target_String:
-            return index_start+i+1
-			
-def findLongCycleRootCauseIndex(index_start,target_String,internaltask_sheet):
-    APDescription = internaltask_sheet.cell_value(index_start,11)
-    for i in range(10):
-        APDescription = internaltask_sheet.cell_value(index_start+i,11)
-        if APDescription==target_String:
-            return index_start+i+2
-        
+	
 def find5whyIndex(index_start,target_String,internaltask_sheet):
     APDescription = internaltask_sheet.cell_value(index_start,1)
     for i in range(10):
@@ -948,13 +931,18 @@ admin=['leienqing',]
 def rca_home():
     if request.method=='GET':
         if g.user.username in admin:
-            return render_template('index.html',count= Todo.query.count(),
+            count = Todo.query.filter_by( NoNeedDoRCAReason='').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count= count,
                                    todos=Todo.query.filter_by( \
                                                               NoNeedDoRCAReason='').order_by(
                                        Todo.PRClosedDate.asc()).all(), \
                                    user=User.query.get(g.user.id).username + '  Logged in')
         else:
-            return render_template('index.html',
+            count=Todo.query.filter_by(user_id = g.user.id,\
+                               NoNeedDoRCAReason='').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count=count,
                                todos=Todo.query.filter_by(user_id = g.user.id,\
                                NoNeedDoRCAReason='').order_by(Todo.PRClosedDate.asc()).all(),\
                                user=User.query.get(g.user.id).username + '  Logged in')
@@ -964,7 +952,50 @@ def rca_home():
         resp.headers["Content-Disposition"] ="attachment; filename=rca_pronto_list.xls"
         resp.headers['Content-Type'] = 'application/x-xlsx'
         return resp
-		
+
+@app.route('/rca_done',methods=['GET','POST'])
+@login_required
+def rca_done():
+    if request.method=='GET':
+        if g.user.username in admin:
+            count = Todo.query.filter_by( NoNeedDoRCAReason='',IsRcaCompleted='Yes').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count= count,
+                                   todos=Todo.query.filter_by( \
+                                                              NoNeedDoRCAReason='',IsRcaCompleted='Yes').order_by(
+                                       Todo.PRClosedDate.asc()).all(), \
+                                   user=User.query.get(g.user.id).username + '  Logged in')
+        else:
+            count=Todo.query.filter_by(user_id = g.user.id,\
+                               NoNeedDoRCAReason='',IsRcaCompleted='Yes').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count=count,
+                               todos=Todo.query.filter_by(user_id = g.user.id,\
+                               NoNeedDoRCAReason='',IsRcaCompleted='Yes').order_by(Todo.PRClosedDate.asc()).all(),\
+                               user=User.query.get(g.user.id).username + '  Logged in')
+
+@app.route('/rca_undone',methods=['GET','POST'])
+@login_required
+def rca_undone():
+    if request.method=='GET':
+        if g.user.username in admin:
+            count = Todo.query.filter_by( NoNeedDoRCAReason='',IsRcaCompleted='No').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count= count,
+                                   todos=Todo.query.filter_by( \
+                                                              NoNeedDoRCAReason='',IsRcaCompleted='No').order_by(
+                                       Todo.PRClosedDate.asc()).all(), \
+                                   user=User.query.get(g.user.id).username + '  Logged in')
+        else:
+            count=Todo.query.filter_by(user_id = g.user.id,\
+                               NoNeedDoRCAReason='',IsRcaCompleted='No').order_by(Todo.PRClosedDate.asc()).count()
+
+            return render_template('index.html',count=count,
+                               todos=Todo.query.filter_by(user_id = g.user.id,\
+                               NoNeedDoRCAReason='',IsRcaCompleted='No').order_by(Todo.PRClosedDate.asc()).all(),\
+                               user=User.query.get(g.user.id).username + '  Logged in')
+
+
 @app.route('/longcycletimerca_home',methods=['GET','POST'])
 @login_required
 def longcycletimerca_home():
@@ -1146,8 +1177,7 @@ def update_rca_team(PRID,internaltask_sheet):
     todo_item.IsRcaCompleted = 'Yes'
     todo_item.CodeDeficiencyDescription = internaltask_sheet.row_values(6)[3]
     todo_item.CorrectionDescription  = internaltask_sheet.row_values(7)[3]
-    aa=findRootCauseIndex(16,'Root Cause',internaltask_sheet)
-    todo_item.RootCause = internaltask_sheet.cell_value(aa,11)
+    todo_item.RootCause = internaltask_sheet.cell_value(20,11)
     db.session.commit()
 
 def update_longcycletimercatable(PRID,request):
@@ -1192,7 +1222,7 @@ def show_or_update(PRID):
             print "after" 
             print ("todo_item.user_id=%d"%todo_item.user_id)
             print ("g.user.id=%d"%g.user.id)
-            flash('This PR is not under your account,You are not authorized to edit this item', 'error')
+            flash('This PR is not under your account,You are not authorized to edit this item, Please login with correct account', 'error')           
             return redirect(url_for('logout'))
     elif request.method == 'POST':
         value = request.form['button']
